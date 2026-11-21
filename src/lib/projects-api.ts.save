@@ -1,0 +1,102 @@
+import { apiClient } from './api-client';
+import { getToken } from './auth';
+
+export interface CreateProjectPayload {
+  title: string;
+  description: string;
+  category: string;
+  goalAmount: number;
+  totalCost: number;
+  images: string[];
+}
+
+export async function createProject(payload: CreateProjectPayload) {
+  return apiClient('/projects', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${getToken()}`
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+export interface Project {
+  _id: string;
+  title: string;
+  description: string;
+  images: string[];
+  category: string;
+  goalAmount: number;
+  totalCost: number;
+  fundedAmount: number;
+  owner: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  investorsCount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface ProjectsResponse {
+  total: number;
+  page: number;
+  limit: number;
+  projects: Project[];
+}
+
+export async function fetchProjects(params?: { search?: string; category?: string }) {
+  const query = new URLSearchParams();
+  if (params?.search) query.set('search', params.search);
+  if (params?.category) query.set('category', params.category);
+
+  const queryString = query.toString();
+  return apiClient<ProjectsResponse>(`/projects${queryString ? `?${queryString}` : ''}`);
+}
+export interface Comment {
+  _id: string;
+  author: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  text: string;
+  createdAt: string;
+}
+
+export interface Investment {
+  _id: string;
+  amount: number;
+  note?: string;
+  source: 'platform' | 'external';
+  proofUrl?: string | null;
+  investorName: string;
+  createdAt: string;
+}
+
+export async function fetchProject(id: string) {
+  return apiClient<Project & { comments: Comment[] }>(`/projects/${id}`);
+}
+
+export async function fetchProjectInvestments(id: string) {
+  return apiClient<Investment[]>(`/projects/${id}/investments`);
+}
+
+export async function investInProject(id: string, amount: number, note?: string) {
+  return apiClient(`/projects/${id}/invest`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: JSON.stringify({ amount, note })
+  });
+}
+
+export async function addComment(id: string, text: string) {
+  return apiClient<Comment[]>(`/projects/${id}/comments`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: JSON.stringify({ text })
+  });
+}
+
